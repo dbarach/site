@@ -21,10 +21,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -103,6 +103,23 @@
 <li class="toctree-l2"><a class="reference internal" href="homegateway.html">Using VPP as a Home Gateway</a></li>
 <li class="toctree-l2"><a class="reference internal" href="contiv/index.html">Contiv/VPP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="networksim.html">Network Simulator Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html">Building VPP web applications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html">Container-based network simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#os-distro-test-results">OS / Distro test results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#proxy-server">Proxy Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#install-and-configure-lxd">Install and configure lxd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#create-three-network-segments">Create three network segments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#set-up-the-default-container-profile">Set up the default container profile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#set-up-the-network-configurations">Set up the network configurations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#create-a-master-container-image">Create a “master” container image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#duplicate-the-master-container-image">Duplicate the “master” container image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#install-handy-script">Install handy script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#test-topology">Test topology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#end-station-configs">End station configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#vpp-configs">VPP configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#ikev2-certificate-setup">IKEv2 certificate setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#dhcpv6-server-setup">DHCPv6 server setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#container-host-interoperation">Container / Host Interoperation</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../featuresbyrelease/index.html">Features by Release</a></li>
@@ -497,6 +514,59 @@ extensive list, but should give a sampling of the many features contained in FD.
 <li class="toctree-l2"><a class="reference internal" href="networksim.html#packet-generator-configuration">Packet Generator Configuration</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="webapp.html">Building VPP web applications</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-1-add-url-handlers">Step 1: Add URL handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-2-register-url-handlers-with-the-server">Step 2: Register URL handlers with the server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-3-install-hugo-pick-a-theme-and-create-a-site">Step 3: Install Hugo, pick a theme, and create a site</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-4-create-a-rawhtml-shortcode">Step 4: Create a “rawhtml” shortcode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-5-create-hugo-content-which-interacts-with-vpp">Step 5: create Hugo content which interacts with vpp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-6-compile-the-website">Step 6: compile the website</a></li>
+<li class="toctree-l2"><a class="reference internal" href="webapp.html#step-7-configure-vpp">Step 7: configure vpp</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="webapp.html#vpp-startup-configuration">vpp startup configuration</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html">Container-based network simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#os-distro-test-results">OS / Distro test results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#proxy-server">Proxy Server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#install-and-configure-lxd">Install and configure lxd</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#create-three-network-segments">Create three network segments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#set-up-the-default-container-profile">Set up the default container profile</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#set-up-the-network-configurations">Set up the network configurations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#dora-network-configuration">dora network configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#swan-network-configuration">swan network configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#create-a-master-container-image">Create a “master” container image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#duplicate-the-master-container-image">Duplicate the “master” container image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#install-handy-script">Install handy script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#test-topology">Test topology</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#test-topology-discussion">Test topology discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#end-station-configs">End station configs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#dorahost-configuration">dorahost configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#swanhost-configuration">swanhost configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#vpp-configs">VPP configs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#dora-configuration">dora configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#swan-configuration">swan configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#ikev2-certificate-setup">IKEv2 certificate setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#dhcpv6-server-setup">DHCPv6 server setup</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#etc-dhcp-dhcpd6-conf">/etc/dhcp/dhcpd6.conf</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="container_test.html#container-host-interoperation">Container / Host Interoperation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#create-a-custom-root-filesystem-image">Create a custom root filesystem image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#create-a-container-which-uses-the-customized-base-image">Create a container which uses the customized base image:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#configure-container-networking">Configure container networking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container_test.html#configure-apt">Configure apt</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -521,7 +591,7 @@ extensive list, but should give a sampling of the many features contained in FD.
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Linux Foundation
+        &copy; Copyright 2018-2020, Linux Foundation
 
     </p>
   </div>

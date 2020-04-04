@@ -21,10 +21,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -107,6 +107,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#bitmaps">Bitmaps</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pools">Pools</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#hashes">Hashes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#timekeeping">Timekeeping</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#format">Format</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#unformat">Unformat</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#vppinfra-errors-and-warnings">Vppinfra errors and warnings</a></li>
@@ -308,6 +309,124 @@ key_pointer. It is usually a bad mistake to pass the address of a
 vector element as the second argument to hash_set_mem. It is perfectly
 fine to memorize constant string addresses in the text segment.</p>
 </div>
+<div class="section" id="timekeeping">
+<h2>Timekeeping<a class="headerlink" href="#timekeeping" title="Permalink to this headline">¶</a></h2>
+<p>Vppinfra includes high-precision, low-cost timing services. The
+datatype clib_time_t and associated functions reside in
+./src/vppinfra/time.[ch]. Call clib_time_init (clib_time_t *cp) to
+initialize the clib_time_t object.</p>
+<p>Clib_time_init(…) can use a variety of different ways to establish
+the hardware clock frequency. At the end of the day, vppinfra
+timekeeping takes the attitude that the operating system’s clock is
+the closest thing to a gold standard it has handy.</p>
+<p>When properly configured, NTP maintains kernel clock synchronization
+with a highly accurate off-premises reference clock.  Notwithstanding
+network propagation delays, a synchronized NTP client will keep the
+kernel clock accurate to within 50ms or so.</p>
+<p>Why should one care? Simply put, oscillators used to generate CPU
+ticks aren’t super accurate. They work pretty well, but a 0.1% error
+wouldn’t be out of the question. That’s a minute and a half’s worth of
+error in 1 day. The error changes constantly, due to temperature
+variation, and a host of other physical factors.</p>
+<p>It’s far too expensive to use system calls for timing, so we’re left
+with the problem of continously adjusting our view of the CPU tick
+register’s clocks_per_second parameter.</p>
+<p>The clock rate adjustment algorithm measures the number of cpu ticks
+and the “gold standard” reference time across an interval of
+approximately 16 seconds. We calculate clocks_per_second for the
+interval: use rdtsc (on x86_64) and a system call to get the latest
+cpu tick count and the kernel’s latest nanosecond timestamp. We
+subtract the previous interval end values, and use exponential
+smoothing to merge the new clock rate sample into the clocks_per_second
+parameter.</p>
+<p>As of this writing, we maintain the clock rate by way of the following
+first-order differential equation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="n">clocks_per_second</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">=</span> <span class="n">clocks_per_second</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span> <span class="o">+</span> <span class="n">sample_cps</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">K</span><span class="p">)</span>
+   <span class="n">where</span> <span class="n">K</span> <span class="o">=</span> <span class="n">e</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">3.75</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>This yields a per observation “half-life” of 1 minute. Empirically,
+the clock rate converges within 5 minutes, and appears to maintain
+near-perfect agreement with the kernel clock in the face of ongoing
+NTP time adjustments.</p>
+<p>See ./src/vppinfra/time.c:clib_time_verify_frequency(…) to look at
+the rate adjustment algorithm. The code rejects frequency samples
+corresponding to the sort of adjustment which might occur if someone
+changes the gold standard kernel clock by several seconds.</p>
+<div class="section" id="monotonic-timebase-support">
+<h3>Monotonic timebase support<a class="headerlink" href="#monotonic-timebase-support" title="Permalink to this headline">¶</a></h3>
+<p>Particularly during system initialization, the “gold standard” system
+reference clock can change by a large amount, in an instant. It’s not
+a best practice to yank the reference clock - in either direction - by
+hours or days. In fact, some poorly-constructed use-cases do so.</p>
+<p>To deal with this reality, clib_time_now(…) returns the number of
+seconds since vpp started, <em>guaranteed to be monotonically
+increasing, no matter what happens to the system reference clock</em>.</p>
+<p>This is first-order important, to avoid breaking every active timer in
+the system. The vpp host stack alone may account for tens of millions
+of active timers. It’s utterly impractical to track down and fix
+timers, so we must deal with the issue at the timebase level.</p>
+<p>Here’s how it works. Prior to adjusting the clock rate, we collect the
+kernel reference clock and the cpu clock:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="o">/*</span> <span class="n">Ask</span> <span class="n">the</span> <span class="n">kernel</span> <span class="ow">and</span> <span class="n">the</span> <span class="n">CPU</span> <span class="n">what</span> <span class="n">time</span> <span class="n">it</span> <span class="ow">is</span><span class="o">...</span> <span class="o">*/</span>
+  <span class="n">now_reference</span> <span class="o">=</span> <span class="n">unix_time_now</span> <span class="p">();</span>
+  <span class="n">now_clock</span> <span class="o">=</span> <span class="n">clib_cpu_time_now</span> <span class="p">();</span>
+</pre></div>
+</div>
+<p>Compute changes for both clocks since the last rate adjustment,
+roughly 15 seconds ago:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="o">/*</span> <span class="n">Compute</span> <span class="n">change</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">reference</span> <span class="n">clock</span> <span class="o">*/</span>
+  <span class="n">delta_reference</span> <span class="o">=</span> <span class="n">now_reference</span> <span class="o">-</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">last_verify_reference_time</span><span class="p">;</span>
+
+  <span class="o">/*</span> <span class="n">And</span> <span class="n">change</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">CPU</span> <span class="n">clock</span> <span class="o">*/</span>
+  <span class="n">delta_clock_in_seconds</span> <span class="o">=</span> <span class="p">(</span><span class="n">f64</span><span class="p">)</span> <span class="p">(</span><span class="n">now_clock</span> <span class="o">-</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">last_verify_cpu_time</span><span class="p">)</span> <span class="o">*</span>
+    <span class="n">c</span><span class="o">-&gt;</span><span class="n">seconds_per_clock</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Delta_reference is key. Almost 100% of the time, delta_reference and
+delta_clock_in_seconds are identical modulo one system-call
+time. However, NTP or a privileged user can yank the system reference
+time - in either direction - by an hour, a day, or a decade.</p>
+<p>As described above, clib_time_now(…) must return monotonically
+increasing answers to the question “how long has it been since vpp
+started, in seconds.” To do that, the clock rate adjustment algorithm
+begins by recomputing the initial reference time:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">c</span><span class="o">-&gt;</span><span class="n">init_reference_time</span> <span class="o">+=</span> <span class="p">(</span><span class="n">delta_reference</span> <span class="o">-</span> <span class="n">delta_clock_in_seconds</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>It’s easy to convince yourself that if the reference clock changes by
+15.000000 seconds and the cpu clock tick time changes by 15.000000
+seconds, the initial reference time won’t change.</p>
+<p>If, on the other hand, delta_reference is -86400.0 and delta clock is
+15.0 - reference time jumped backwards by exactly one day in a
+15-second rate update interval - we add -86415.0 to the initial
+reference time.</p>
+<p>Given the corrected initial reference time, we recompute the total
+number of cpu ticks which have occurred since the corrected initial
+reference time, at the current clock tick rate:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">c</span><span class="o">-&gt;</span><span class="n">total_cpu_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">now_reference</span> <span class="o">-</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">init_reference_time</span><span class="p">)</span>
+    <span class="o">*</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">clocks_per_second</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="timebase-precision">
+<h3>Timebase precision<a class="headerlink" href="#timebase-precision" title="Permalink to this headline">¶</a></h3>
+<p>Cognoscenti may notice that vlib/clib_time_now(…) return a 64-bit
+floating-point value; the number of seconds since vpp started.</p>
+<p>Please see <a class="reference external" href="https://en.wikipedia.org/wiki/Double-precision_floating-point_format">this Wikipedia
+article</a>
+for more information. C double-precision floating point numbers
+(called f64 in the vpp code base) have a 53-bit effective mantissa,
+and can accurately represent 15 decimal digits’ worth of precision.</p>
+<p>There are 315,360,000.000001 seconds in ten years plus one
+microsecond. That string has exactly 15 decimal digits. The vpp time
+base retains 1us precision for roughly 30 years.</p>
+<p>vlib/clib_time_now do <em>not</em> provide precision in excess of 1e-6
+seconds. If necessary, please use clib_cpu_time_now(…) for direct
+access to the CPU clock-cycle counter. Note that the number of CPU
+clock cycles per second varies significantly across CPU architectures.</p>
+</div>
+</div>
 <div class="section" id="format">
 <h2>Format<a class="headerlink" href="#format" title="Permalink to this headline">¶</a></h2>
 <p>Vppinfra format is roughly equivalent to printf.</p>
@@ -394,25 +513,37 @@ argument parsing codes using “%=”.</p>
 <p>The phrase “bitzero %|” means “set the specified bit in the supplied
 bitmask” if unformat parses “bitzero”. Although it looks like it could
 be fairly handy, it’s very lightly used in the code base.</p>
-<div class="section" id="how-to-parse-a-single-input-line">
-<h3>How to parse a single input line<a class="headerlink" href="#how-to-parse-a-single-input-line" title="Permalink to this headline">¶</a></h3>
-<p>Debug CLI command functions MUST NOT accidentally consume input
-belonging to other debug CLI commands. Otherwise, it’s impossible to
-script a set of debug CLI commands which “work fine” when issued one
-at a time.</p>
-<p>This bit of code is NOT correct:</p>
-<div class="highlight-c notranslate"><div class="highlight"><pre><span></span>  <span class="cm">/* Eats script input NOT beloging to it, and chokes! */</span>
-  <span class="k">while</span> <span class="p">(</span><span class="n">unformat_check_input</span> <span class="p">(</span><span class="n">input</span><span class="p">)</span> <span class="o">!=</span> <span class="n">UNFORMAT_END_OF_INPUT</span><span class="p">)</span>
-    <span class="p">{</span>
-      <span class="k">if</span> <span class="p">(</span><span class="n">unformat</span> <span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="p">...))</span>
-	<span class="p">;</span>
-      <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">unformat</span> <span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="p">...))</span>
-	<span class="p">;</span>
-      <span class="k">else</span>
-        <span class="k">return</span> <span class="nf">clib_error_return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">&quot;parse error: &#39;%U&#39;&quot;</span><span class="p">,</span>
-              			     <span class="n">format_unformat_error</span><span class="p">,</span> <span class="n">input</span><span class="p">);</span>
-	<span class="p">}</span>
-    <span class="p">}</span>
+<p><code class="docutils literal notranslate"><span class="pre">%_</span></code> toggles whether or not to skip input white space.</p>
+<p>For transition from skip to no-skip in middle of format string, skip input white space.  For example, the following:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">fmt</span> <span class="o">=</span> <span class="s">&quot;%_%d.%d%_-&gt;%_%d.%d%_&quot;</span>
+<span class="n">unformat</span> <span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="n">fmt</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">one</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">two</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">three</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">four</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>matches input “1.2 -&gt; 3.4”.
+Without this, the space after -&gt; does not get skipped.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+### How to parse a single input line
+
+Debug CLI command functions MUST NOT accidentally consume input
+belonging to other debug CLI commands. Otherwise, it&#39;s impossible to
+script a set of debug CLI commands which &quot;work fine&quot; when issued one
+at a time.
+
+This bit of code is NOT correct:
+
+```c
+  /* Eats script input NOT beloging to it, and chokes! */
+  while (unformat_check_input (input) != UNFORMAT_END_OF_INPUT)
+    {
+      if (unformat (input, ...))
+	;
+      else if (unformat (input, ...))
+	;
+      else
+        return clib_error_return (0, &quot;parse error: &#39;%U&#39;&quot;,
+              			     format_unformat_error, input);
+	}
+    }
 </pre></div>
 </div>
 <p>When executed as part of a script, such a function will return “parse
@@ -475,7 +606,6 @@ unformat_input_t that contains “is clear”.</p>
 </pre></div>
 </div>
 </div>
-</div>
 <div class="section" id="vppinfra-errors-and-warnings">
 <h2>Vppinfra errors and warnings<a class="headerlink" href="#vppinfra-errors-and-warnings" title="Permalink to this headline">¶</a></h2>
 <p>Many functions within the vpp dataplane have return-values of type
@@ -518,7 +648,7 @@ little-endian host and unserializing on a big-endian host.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Linux Foundation
+        &copy; Copyright 2018-2020, Linux Foundation
 
     </p>
   </div>

@@ -21,10 +21,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
@@ -215,7 +215,7 @@ own ELF-sections [primarily] to make lists of init, configuration, and exit
 handlers.</p>
 <p>When developing with VPP, in gdb it’s often sufficient to start an application
 like this:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">(gdb) run unix interactive</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp gp-VirtualEnv">(gdb)</span> <span class="go">run unix interactive</span>
 </pre></div>
 </div>
 </div>
@@ -726,7 +726,7 @@ string of the form “DDDD:BB:SS.F” where:</p>
 <li><p>SS = Slot number</p></li>
 <li><p>F = Function</p></li>
 </ul>
-<p>If the keywork <strong>default</strong> is used the values will apply to all the devices.</p>
+<p>If the keyword <strong>default</strong> is used the values will apply to all the devices.</p>
 <p>This is the same format used in the linux sysfs tree (i.e./sys/bus/pci/devices)
 for PCI device directory names.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">dpdk {</span>
@@ -768,7 +768,7 @@ take precedence</p>
 <h3>num-rx-queues &lt;n&gt;<a class="headerlink" href="#num-rx-queues-n" title="Permalink to this headline">¶</a></h3>
 <p>Number of receive queues. Also enables RSS. Default value is 1.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">dev 0000:02:00.1 {</span>
-<span class="go">   num-tx-queues &lt;n&gt;</span>
+<span class="go">   num-rx-queues &lt;n&gt;</span>
 <span class="go">}</span>
 </pre></div>
 </div>
@@ -1070,6 +1070,17 @@ a random, non-static entry is deleted. Defaults to 65535 entries.</p>
 </div>
 </div>
 </div>
+<div class="section" id="ethernet-section">
+<h2>ethernet Section<a class="headerlink" href="#ethernet-section" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="default-mtu-n">
+<h3>default-mtu &lt;n&gt;<a class="headerlink" href="#default-mtu-n" title="Permalink to this headline">¶</a></h3>
+<p>Specifies the default MTU size for Ethernet interfaces.  Must be in
+the range of 64-9000.  The default is 9000.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">default-mtu 1500</span>
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="heapsize-section">
 <h2>heapsize Section<a class="headerlink" href="#heapsize-section" title="Permalink to this headline">¶</a></h2>
 <p>Heapsize configuration controls the size of the main heap. The heap size is
@@ -1077,9 +1088,7 @@ configured very early in the boot sequence, before loading plug-ins or doing
 much of anything else.</p>
 <div class="section" id="heapsize-n-m-n-g">
 <h3>heapsize &lt;n&gt;M | &lt;n&gt;G<a class="headerlink" href="#heapsize-n-m-n-g" title="Permalink to this headline">¶</a></h3>
-<p>Specifies the size of the heap in MB or GB. The default is 1GB. Setting the
-main heap size to 4GB or more requires recompilation of the entire system
-with CLIB_VEC64 &gt; 0. See …/clib/clib/vec_bootstrap.h.</p>
+<p>Specifies the size of the heap in MB or GB. The default is 1GB.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">heapsize 2G</span>
 </pre></div>
 </div>
@@ -1354,6 +1363,27 @@ Default is 2.04 seconds.</p>
 </div>
 </div>
 </div>
+<div class="section" id="physmem-section">
+<h2>physmem Section<a class="headerlink" href="#physmem-section" title="Permalink to this headline">¶</a></h2>
+<p>Configuration parameters used to specify base address and maximum size of
+the memory allocated for the pmalloc module in VPP. pmalloc is a NUMA-aware,
+growable physical memory allocator. pmalloc allocates memory for the DPDK
+memory pool.</p>
+<div class="section" id="base-addr-address">
+<h3>base-addr &lt;address&gt;<a class="headerlink" href="#base-addr-address" title="Permalink to this headline">¶</a></h3>
+<p>Specify the base address for pmalloc memory space.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">base-addr 0xfffe00000000</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="max-size-n-g-n-m-n-k-n">
+<h3>max-size &lt;n&gt;G | &lt;n&gt;M | &lt;n&gt;K | &lt;n&gt;<a class="headerlink" href="#max-size-n-g-n-m-n-k-n" title="Permalink to this headline">¶</a></h3>
+<p>Set the memory size for pmalloc memory space. The default is 16G.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">max-size 4G</span>
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="tapcli-section">
 <h2>tapcli Section<a class="headerlink" href="#tapcli-section" title="Permalink to this headline">¶</a></h2>
 <p>Configuration parameters for TAPCLI (dynamic tap interface hookup.)</p>
@@ -1551,7 +1581,7 @@ os_exit is called.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Linux Foundation
+        &copy; Copyright 2018-2020, Linux Foundation
 
     </p>
   </div>
